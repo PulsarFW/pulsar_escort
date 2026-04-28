@@ -1,0 +1,48 @@
+name: Create release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install zip
+        run: sudo apt install zip
+
+      - name: Get latest code
+        uses: actions/checkout@v4
+
+      - name: Bundle files
+        run: |
+          mkdir -p ./temp/pulsar-escort
+          cp ./{README.md,fxmanifest.lua} ./temp/pulsar-escort
+          cp -r ./{client,server} ./temp/pulsar-escort
+          cd ./temp && zip -r ../pulsar-escort.zip ./pulsar-escort
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "PULSAR-ESCORT ${{ github.ref_name }}"
+          body: |
+            ![Pulsar Framework](https://r2.fivemanage.com/GPYOH8Hq4GPyAY7czrgLe/pulsarbanner.png)
+
+            ## PULSAR-ESCORT ${{ github.ref_name }}
+
+            Player escorting and trunk detention system for Pulsar Framework.
+
+            ### Installation
+            1. Download `pulsar-escort.zip` below
+            2. Extract into your server's `resources` folder
+            3. Add `ensure pulsar-escort` to your `server.cfg`
+
+            ---
+            ![Pulsar Framework](https://img.shields.io/badge/Pulsar-Framework-7c3aed?style=flat-square)
+            ![Built for FiveM](https://img.shields.io/badge/Built_for-FiveM-F40552?style=flat-square)
+          files: pulsar-escort.zip
+          prerelease: false
