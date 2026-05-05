@@ -12,18 +12,14 @@ jobs:
   create-release:
     runs-on: ubuntu-latest
     steps:
-      - name: Install zip
-        run: sudo apt install zip
-
       - name: Get latest code
         uses: actions/checkout@v4
 
       - name: Bundle files
         run: |
-          mkdir -p ./temp/pulsar-escort
-          cp ./{README.md,fxmanifest.lua} ./temp/pulsar-escort
-          cp -r ./{client,server} ./temp/pulsar-escort
-          cd ./temp && zip -r ../pulsar-escort.zip ./pulsar-escort
+          mkdir -p staging/pulsar-escort
+          rsync -a --exclude='.github' --exclude='node_modules' --exclude='staging' . staging/pulsar-escort/
+          cd staging && zip -r ../pulsar-escort.zip pulsar-escort/
 
       - name: Create release
         uses: softprops/action-gh-release@v2
