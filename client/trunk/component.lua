@@ -9,40 +9,39 @@ local customOffsets = {
 
 local _inTrunkVeh = nil
 
-AddEventHandler('onClientResourceStart', function(resource)
-	if resource == GetCurrentResourceName() then
-		Wait(1000)
-		exports["pulsar-core"]:RegisterClientCallback("Trunk:GetPutIn", function(data, cb)
-			if NetworkDoesEntityExistWithNetworkId(data) then
-				InTrunk(NetToVeh(data))
+CreateThread(function()
+	plsr.State.flags.inTrunk = false
+
+	plsr.Callbacks:RegisterClientCallback("Trunk:GetPutIn", function(data, cb)
+		if NetworkDoesEntityExistWithNetworkId(data) then
+			InTrunk(NetToVeh(data))
+		end
+	end)
+
+	plsr.Callbacks:RegisterClientCallback("Trunk:GetPulledOut", function(data, cb)
+		if plsr.State.flags.inTrunk then
+			plsr.Trunk:GetOut()
+
+			while plsr.State.flags.inTrunk do
+				Wait(5)
 			end
-		end)
 
-		exports["pulsar-core"]:RegisterClientCallback("Trunk:GetPulledOut", function(data, cb)
-			if LocalPlayer.state.inTrunk then
-				exports['pulsar-escort']:TrunkGetOut()
-
-				while LocalPlayer.state.inTrunk do
-					Wait(5)
-				end
-
-				cb(true)
-			else
-				cb(false)
-			end
-		end)
-	end
+			cb(true)
+		else
+			cb(false)
+		end
+	end)
 end)
 
 AddEventHandler("Keybinds:Client:KeyUp:primary_action", function()
-	if LocalPlayer.state.inTrunk and (not LocalPlayer.state.isDead and not LocalPlayer.state.isCuffed) then
-		exports['pulsar-escort']:TrunkGetOut()
+	if plsr.State.flags.inTrunk and (not plsr.State.flags.isDead and not plsr.State.flags.isCuffed) then
+		plsr.Trunk:GetOut()
 	end
 end)
 
 AddEventHandler("Keybinds:Client:KeyUp:secondary_action", function()
-	if LocalPlayer.state.inTrunk and (not LocalPlayer.state.isDead and not LocalPlayer.state.isCuffed) then
-		exports['pulsar-escort']:TrunkToggleTrunk()
+	if plsr.State.flags.inTrunk and (not plsr.State.flags.isDead and not plsr.State.flags.isCuffed) then
+		plsr.Trunk:ToggleTrunk()
 	end
 end)
 
@@ -60,10 +59,10 @@ function MountTrunkCam()
 		SetCamRot(cam, 0.0, 0.0, 0.0)
 		SetCamActive(cam, true)
 		RenderScriptCams(true, false, 0, true, true)
-		SetCamCoord(cam, LocalPlayer.state.myPos)
+		SetCamCoord(cam, plsr.State.flags.position)
 	end
-	AttachCamToEntity(cam, LocalPlayer.state.ped, 0.0, -2.5, 1.0, true)
-	SetCamRot(cam, -30.0, 0.0, GetEntityHeading(LocalPlayer.state.ped))
+	AttachCamToEntity(cam, PlayerPedId(), 0.0, -2.5, 1.0, true)
+	SetCamRot(cam, -30.0, 0.0, GetEntityHeading(PlayerPedId()))
 end
 
 function UnmountTrunkCam()
@@ -87,10 +86,10 @@ function InTrunk(veh)
 
 		_inTrunkVeh = veh
 		--Entity(veh).state.VIN
-		LocalPlayer.state:set("inTrunk", true)
+		plsr.State.flags.inTrunk = true
 		TriggerServerEvent("Trunk:Server:Enter", VehToNet(veh))
 
-		while not LocalPlayer.state.inTrunk do
+		while not plsr.State.flags.inTrunk do
 			Wait(5)
 		end
 
@@ -99,16 +98,16 @@ function InTrunk(veh)
 
 		loadAnimDict(animDict)
 
-		DetachEntity(LocalPlayer.state.ped)
-		SetPedKeepTask(LocalPlayer.state.ped, true)
-		ClearPedTasks(LocalPlayer.state.ped)
-		TaskPlayAnim(LocalPlayer.state.ped, animDict, anim, 8.0, 8.0, -1, 2, 999.0, 0, 0, 0)
+		DetachEntity(PlayerPedId())
+		SetPedKeepTask(PlayerPedId(), true)
+		ClearPedTasks(PlayerPedId())
+		TaskPlayAnim(PlayerPedId(), animDict, anim, 8.0, 8.0, -1, 2, 999.0, 0, 0, 0)
 
 		local vehicleName = GetEntityModel(veh)
 		local trunkOffsets = customOffsets[vehicleName] or { y = 0.0, z = 0.0 }
 
 		AttachEntityToEntity(
-			LocalPlayer.state.ped,
+			PlayerPedId(),
 			veh,
 			0,
 			-0.1,
@@ -133,14 +132,14 @@ function InTrunk(veh)
 			Wait(10)
 		end
 
-		if not LocalPlayer.state.isCuffed and not LocalPlayer.state.isDead then
-			exports['pulsar-hud']:ActionShow(
+		if not plsr.State.flags.isCuffed and not plsr.State.flags.isDead then
+			plsr.Action:Show(
 				"trunk",
 				"{keybind}primary_action{/keybind} Exit Trunk | {keybind}secondary_action{/keybind} Open/Close Trunk"
 			)
 		end
 
-		while LocalPlayer.state.loggedIn and LocalPlayer.state.inTrunk and veh == _inTrunkVeh do
+		while plsr.State.flags.loggedIn and plsr.State.flags.inTrunk and veh == _inTrunkVeh do
 			--MountTrunkCam()
 
 			if not IsVehicleSeatFree(veh, -1) then
@@ -167,12 +166,13 @@ function InTrunk(veh)
 			end
 
 			if not DoesEntityExist(veh) then
-				exports['pulsar-escort']:TrunkGetOut()
+				plsr.Trunk:GetOut()
 			end
 
-			if not IsEntityPlayingAnim(LocalPlayer.state.ped, animDict, anim, 3) then
-				TaskPlayAnim(LocalPlayer.state.ped, animDict, anim, 8.0, 8.0, -1, 1, 999.0, 0, 0, 0)
+			if not IsEntityPlayingAnim(PlayerPedId(), animDict, anim, 3) then
+				TaskPlayAnim(PlayerPedId(), animDict, anim, 8.0, 8.0, -1, 1, 999.0, 0, 0, 0)
 			end
+
 
 			Wait(1)
 		end
@@ -183,15 +183,15 @@ function InTrunk(veh)
 				Wait(10)
 			end
 
-			exports['pulsar-hud']:ActionHide("trunk")
+			plsr.Action:Hide("trunk")
 			SetVehicleDoorOpen(_inTrunkVeh, 5, 1, 1)
 			UnmountTrunkCam()
-			DetachEntity(LocalPlayer.state.ped)
+			DetachEntity(PlayerPedId())
 			if DoesEntityExist(veh) then
 				local exit = GetOffsetFromEntityInWorldCoords(veh, 0.0, min.y - 0.5, 0.0)
-				SetEntityCoords(LocalPlayer.state.ped, exit.x, exit.y, exit.z)
+				SetEntityCoords(PlayerPedId(), exit.x, exit.y, exit.z)
 			else
-				SetEntityCoords(LocalPlayer.state.ped, GetEntityCoords(LocalPlayer.state.ped))
+				SetEntityCoords(PlayerPedId(), GetEntityCoords(PlayerPedId()))
 			end
 
 			_inTrunkVeh = nil
@@ -203,26 +203,30 @@ function InTrunk(veh)
 	end
 end
 
-exports("TrunkGetIn", function(veh)
-	InTrunk(veh)
-end)
-
-exports("TrunkGetOut", function()
-	TriggerServerEvent("Trunk:Server:Exit", VehToNet(_inTrunkVeh))
-end)
-
-exports("TrunkToggleTrunk", function()
-	if GetVehicleDoorAngleRatio(_inTrunkVeh, 5) > 0.0 then
-		--SetVehicleDoorsShut(_inTrunkVeh, 5, true, false)
-		exports['pulsar-vehicles']:SyncDoorsShut(_inTrunkVeh, 5, true)
-	else
-		--SetVehicleDoorOpen(_inTrunkVeh, 5, true, true)
-		exports['pulsar-vehicles']:SyncDoorsOpen(_inTrunkVeh, 5, false, false)
-	end
-end)
+_TRUNK = {
+	GetIn = function(self, veh)
+		InTrunk(veh)
+	end,
+	GetOut = function(self)
+		TriggerServerEvent("Trunk:Server:Exit", VehToNet(_inTrunkVeh))
+	end,
+	ToggleTrunk = function(self)
+		if GetVehicleDoorAngleRatio(_inTrunkVeh, 5) > 0.0 then
+			--SetVehicleDoorsShut(_inTrunkVeh, 5, true, false)
+			plsr.Vehicles.Sync.Doors:Shut(_inTrunkVeh, 5, true)
+		else
+			--SetVehicleDoorOpen(_inTrunkVeh, 5, true, true)
+			plsr.Vehicles.Sync.Doors:Open(_inTrunkVeh, 5, false, false)
+		end
+	end,
+}
 
 RegisterNetEvent("Trunk:Client:Exit", function()
-	LocalPlayer.state:set("inTrunk", false)
+	plsr.State.flags.inTrunk = false
+end)
+
+AddEventHandler("Proxy:Shared:RegisterReady", function()
+	exports["pulsar_core"]:RegisterComponent("Trunk", _TRUNK)
 end)
 
 AddEventHandler("Trunk:Client:GetIn", function(entity, data)
@@ -230,17 +234,15 @@ AddEventHandler("Trunk:Client:GetIn", function(entity, data)
 end)
 
 AddEventHandler("Ped:Client:Died", function()
-	if LocalPlayer.state.inTrunk then
-		exports['pulsar-escort']:TrunkGetOut()
+	if plsr.State.flags.inTrunk then
+		plsr.Trunk:GetOut()
 	end
 end)
 
 AddEventHandler("Trunk:Client:PutIn", function(entity, data)
-	exports["pulsar-core"]:ServerCallback("Trunk:PutIn", NetworkGetNetworkIdFromEntity(entity.entity),
-		function(state) end)
+	plsr.Callbacks:ServerCallback("Trunk:PutIn", NetworkGetNetworkIdFromEntity(entity.entity), function(state) end)
 end)
 
 AddEventHandler("Trunk:Client:PullOut", function(entity, data)
-	exports["pulsar-core"]:ServerCallback("Trunk:PullOut", NetworkGetNetworkIdFromEntity(entity.entity),
-		function(state) end)
+	plsr.Callbacks:ServerCallback("Trunk:PullOut", NetworkGetNetworkIdFromEntity(entity.entity), function(state) end)
 end)

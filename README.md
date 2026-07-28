@@ -6,12 +6,18 @@
 
 # PULSAR-ESCORT
 
-### Player escorting and trunk detention system
+### Drag/carry a player — `plsr.Escort`, plus `plsr.Trunk` for stuffing a player into a vehicle trunk
 
 <br/>
 
 ![Lua](https://img.shields.io/badge/Lua_5.4-2C2D72?style=flat-square&logo=lua&logoColor=white)
 ![FiveM](https://img.shields.io/badge/FiveM-F40552?style=flat-square)
+
+<br/>
+
+<sub>Enjoy the framework? A coffee helps keep active development, hardening, and support going.</sub>
+
+<a href="https://buymeacoffee.com/pulsarframework"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 50px !important;width: 180px !important;" /></a>
 
 <br/>
 
@@ -23,14 +29,15 @@
 
 ## Overview
 
-Escort and detention system for Pulsar Framework. Allows authorised players to escort others and place them in vehicle trunks — used by law enforcement and criminal roleplay.
+Registers two components: `plsr.Escort` (drag/carry another player, keybind-driven) and `plsr.Trunk` (force a player into and out of a vehicle trunk) — the mechanics used for arrests, kidnapping, and similar restrain-and-move scenarios.
 
 ---
 
 ## Dependencies
 
-- `pulsar-core` — framework core
-- `pulsar-characters` — job check for escort permissions
+- `pulsar_core` — framework core
+- `pulsar_keybinds` — the escort keybind
+- `pulsar_pwnzor` — anti-cheat check loaded alongside every resource
 
 ---
 
